@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="player1_top">#1E88E5</color>
+    <color name="player1_bottom">#0D47A1</color>
+    <color name="player2_top">#E53935</color>
+    <color name="player2_bottom">#B71C1C</color>
+    <color name="player3_top">#43A047</color>
+    <color name="player3_bottom">#1B5E20</color>
+    <color name="player4_top">#FB8C00</color>
+    <color name="player4_bottom">#E65100</color>
+    <color name="player5_top">#8E24AA</color>
+    <color name="player5_bottom">#4A148C</color>
+    <color name="player6_top">#00897B</color>
+    <color name="player6_bottom">#004D40</color>
+
+    <color name="divider">#000000</color>
+    <color name="score_text">#FFFFFF</color>
+    <color name="name_text">#DDFFFFFF</color>
+    <color name="symbol_text">#55FFFFFF</color>
+    <color name="reset_bg">#CC222222</color>
+    <color name="reset_text">#FFFFFF</color>
+
+    <color name="ic_launcher_background">#0D1B2A</color>
+</resources>

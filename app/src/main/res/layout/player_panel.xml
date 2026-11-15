@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One player's area: upper half adds a point, lower half subtracts one. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:layout_margin="1.5dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/inc"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/symbol_plus">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:layout_marginStart="14dp"
+                android:layout_marginTop="4dp"
+                android:text="@string/symbol_plus"
+                android:textColor="@color/symbol_text"
+                android:textSize="32sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/dec"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/symbol_minus">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:layout_marginStart="14dp"
+                android:layout_marginBottom="4dp"
+                android:text="@string/symbol_minus"
+                android:textColor="@color/symbol_text"
+                android:textSize="32sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="8dp"
+        android:paddingHorizontal="44dp"
+        android:gravity="center"
+        android:clickable="false"
+        android:focusable="false"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="@color/name_text"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/score"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="40dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center"
+        android:paddingHorizontal="8dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:maxLines="1"
+        android:text="0"
+        android:textColor="@color/score_text"
+        android:textSize="260sp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMaxTextSize="260sp"
+        android:autoSizeMinTextSize="24sp"
+        android:autoSizeStepGranularity="4sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false" />
+</FrameLayout>

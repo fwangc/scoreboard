@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Scoreboard</string>
+    <string name="symbol_plus">+</string>
+    <string name="symbol_minus">–</string>
+    <string name="reset_label">RESET</string>
+    <string name="reset_hint">Hold to reset · Tap for players</string>
+    <string name="default_player_name">Player %1$d</string>
+    <string name="players_title">Players</string>
+    <string name="players_count_label">Number of players</string>
+    <string name="players_names_label">Names</string>
+</resources>

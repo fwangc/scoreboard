@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/divider">
+
+    <!-- Rows of player panels, filled in from code based on the player count -->
+    <LinearLayout
+        android:id="@+id/board"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical" />
+
+    <!-- Small control: hold to reset scores, tap to set up players -->
+    <LinearLayout
+        android:id="@+id/resetButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="10dp"
+        android:background="@color/reset_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/reset_hint">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_label"
+            android:textColor="@color/reset_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/reset_hint"
+            android:textColor="@color/symbol_text"
+            android:textSize="9sp" />
+    </LinearLayout>
+
+</FrameLayout>
