@@ -63,7 +63,7 @@
 
   /* Score change history column, right edge of each panel */
   .hist {
-    position: absolute; right: 6px; top: 6px; bottom: 6px; width: 60px;
+    position: absolute; right: 6px; top: 6px; bottom: 6px; width: 72px;
     overflow: hidden; pointer-events: none; z-index: 2;
     display: flex; flex-direction: column; gap: 4px;
   }
@@ -303,8 +303,10 @@
 
   // ---- score change ----
   function change(i, d) {
+    const from = state.scores[i];
     state.scores[i] = Math.max(0, state.scores[i] + d);
-    addHistory(i, d);
+    const to = state.scores[i];
+    if (from !== to) addHistory(i, from, to);
     updateScores();
     save();
     feedback(false);
@@ -322,11 +324,21 @@
   }
 
   // ---- history ----
-  function addHistory(i, delta) {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    state.history[i].unshift({ delta, time: timeStr });
-    if (state.history[i].length > 20) state.history[i].length = 20;
+  const MERGE_MS = 30000;
+
+  function addHistory(i, from, to) {
+    const nowMs = Date.now();
+    const timeStr = new Date(nowMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dir = Math.sign(to - from);
+    const hist = state.history[i];
+    const last = hist[0];
+    if (last && last.dir === dir && nowMs - last.lastMs < MERGE_MS) {
+      last.to = to;
+      last.lastMs = nowMs;
+    } else {
+      hist.unshift({ from, to, dir, time: timeStr, lastMs: nowMs });
+      if (hist.length > 20) hist.length = 20;
+    }
     renderHistory(i);
   }
 
@@ -336,8 +348,8 @@
     el.innerHTML = '';
     for (const entry of state.history[i].slice(0, 10)) {
       const item = document.createElement('div');
-      item.className = 'hist-item ' + (entry.delta > 0 ? 'pos' : 'neg');
-      item.textContent = (entry.delta > 0 ? '+1' : '−1') + ' ' + entry.time;
+      item.className = 'hist-item ' + (entry.dir > 0 ? 'pos' : 'neg');
+      item.textContent = entry.from + '→' + entry.to + ' ' + entry.time;
       el.appendChild(item);
     }
   }
