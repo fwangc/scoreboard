@@ -40,7 +40,7 @@
   .inc .sym { top: 8px; }
   .dec .sym { bottom: 10px; }
   .name {
-    position: absolute; top: 10px; left: 50px; right: 50px; text-align: center;
+    position: absolute; top: 10px; left: 50px; right: 70px; text-align: center;
     color: rgba(255,255,255,.87); font-weight: 700; font-size: clamp(16px, 9cqmin, 34px);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
   }
@@ -51,6 +51,28 @@
     font-size: min(62cqh, calc(150cqw / var(--chars, 1)));
     font-variant-numeric: tabular-nums;
   }
+
+  /* Tap progress dots shown in the half being tapped */
+  .tap-prog {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 20px; letter-spacing: 5px; pointer-events: none;
+    color: rgba(255,255,255,.85); z-index: 3;
+  }
+  .inc .tap-prog { bottom: 6px; }
+  .dec .tap-prog { top: 6px; }
+
+  /* Score change history column, right edge of each panel */
+  .hist {
+    position: absolute; right: 6px; top: 6px; bottom: 6px; width: 60px;
+    overflow: hidden; pointer-events: none; z-index: 2;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .hist-item {
+    font-size: 11px; line-height: 1.3; text-align: right;
+    font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600;
+  }
+  .hist-item.pos { color: rgba(160,255,160,.7); }
+  .hist-item.neg { color: rgba(255,140,140,.7); }
 
   #control {
     position: fixed; left: 50%; transform: translate(-50%, -50%); top: 50%;
@@ -118,23 +140,30 @@
 <script>
 (() => {
   const MIN = 2, MAX = 6, START = 2, HOLD_MS = 700;
+  const TAPS_NEEDED = 3, TAP_RESET_MS = 800;
   const STORE = "scoreboard.v1";
   const COLORS = [
     ["#1E88E5", "#0D47A1"], ["#E53935", "#B71C1C"], ["#43A047", "#1B5E20"],
     ["#FB8C00", "#E65100"], ["#8E24AA", "#4A148C"], ["#00897B", "#004D40"],
   ];
 
-  let state = { count: 2, scores: Array(MAX).fill(START), names: Array(MAX).fill("") };
+  const emptyHistory = () => Array(MAX).fill(null).map(() => []);
+
+  let state = { count: 2, scores: Array(MAX).fill(START), names: Array(MAX).fill(""), history: emptyHistory() };
   try {
     const saved = JSON.parse(localStorage.getItem(STORE));
-    if (saved) state = { ...state, ...saved };
+    if (saved) {
+      state = { ...state, ...saved };
+      if (!Array.isArray(state.history)) state.history = emptyHistory();
+      for (let i = 0; i < MAX; i++) if (!Array.isArray(state.history[i])) state.history[i] = [];
+    }
   } catch (e) {}
   state.count = Math.min(MAX, Math.max(MIN, state.count | 0));
 
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} };
   const displayName = i => (state.names[i] || "").trim() || `Player ${i + 1}`;
 
-  // ---- feedback: short beep (+ vibration where supported) ----
+  // ---- feedback ----
   let audio;
   function feedback(longer) {
     if (navigator.vibrate) navigator.vibrate(longer ? 120 : 30);
@@ -146,11 +175,17 @@
       o.start(); o.stop(audio.currentTime + (longer ? 0.15 : 0.06));
     } catch (e) {}
   }
+  function feedbackLight() {
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+
+  // ---- tap state: one entry per player ----
+  const tapState = Array(MAX).fill(null).map(() => ({ dir: 0, count: 0, timer: null }));
 
   // ---- board ----
   const board = document.getElementById("board");
   const control = document.getElementById("control");
-  let scoreEls = [];
+  let scoreEls = [], progEls = [], histEls = [];
 
   function rowSizes(n) {
     const portrait = innerHeight > innerWidth;
@@ -160,7 +195,7 @@
 
   function render() {
     board.innerHTML = "";
-    scoreEls = [];
+    scoreEls = []; progEls = []; histEls = [];
     const rows = rowSizes(state.count);
     let i = 0;
     for (const size of rows) {
@@ -169,25 +204,45 @@
       for (let k = 0; k < size; k++, i++) row.appendChild(panel(i));
       board.appendChild(row);
     }
-    // Center the control when the screen's center falls on a divider (between rows, or
-    // between two panels of the middle row); otherwise tuck it at the bottom edge.
     const centered = rows.length % 2 === 0 || rows[(rows.length - 1) / 2] % 2 === 0;
     control.classList.toggle("bottom", !centered);
     updateScores();
+    for (let j = 0; j < state.count; j++) renderHistory(j);
   }
 
   function panel(i) {
     const p = document.createElement("div");
     p.className = "panel";
-    p.innerHTML = `
-      <div class="half inc" style="background:${COLORS[i][0]}"><span class="sym">+</span></div>
-      <div class="half dec" style="background:${COLORS[i][1]}"><span class="sym">–</span></div>
-      <div class="name"></div>
-      <div class="score"></div>`;
-    p.querySelector(".name").textContent = displayName(i);
-    p.querySelector(".inc").addEventListener("click", () => change(i, 1));
-    p.querySelector(".dec").addEventListener("click", () => change(i, -1));
-    scoreEls.push(p.querySelector(".score"));
+
+    // Inc half
+    const incEl = document.createElement("div");
+    incEl.className = "half inc";
+    incEl.style.background = COLORS[i][0];
+    const incSym = document.createElement("span"); incSym.className = "sym"; incSym.textContent = "+";
+    const incProg = document.createElement("div"); incProg.className = "tap-prog";
+    incEl.appendChild(incSym); incEl.appendChild(incProg);
+
+    // Dec half
+    const decEl = document.createElement("div");
+    decEl.className = "half dec";
+    decEl.style.background = COLORS[i][1];
+    const decSym = document.createElement("span"); decSym.className = "sym"; decSym.textContent = "–";
+    const decProg = document.createElement("div"); decProg.className = "tap-prog";
+    decEl.appendChild(decSym); decEl.appendChild(decProg);
+
+    const nameEl = document.createElement("div"); nameEl.className = "name"; nameEl.textContent = displayName(i);
+    const scoreEl = document.createElement("div"); scoreEl.className = "score";
+    const histEl = document.createElement("div"); histEl.className = "hist";
+
+    p.appendChild(incEl); p.appendChild(decEl);
+    p.appendChild(nameEl); p.appendChild(scoreEl); p.appendChild(histEl);
+
+    progEls.push({ inc: incProg, dec: decProg });
+    scoreEls.push(scoreEl);
+    histEls.push(histEl);
+
+    incEl.addEventListener("click", () => handleTap(i, 1));
+    decEl.addEventListener("click", () => handleTap(i, -1));
     return p;
   }
 
@@ -199,14 +254,92 @@
     });
   }
 
+  // ---- 3-tap logic ----
+  function handleTap(i, d) {
+    const ts = tapState[i];
+    clearTimeout(ts.timer);
+
+    if (ts.dir !== d) {
+      ts.count = 1;
+      ts.dir = d;
+    } else {
+      ts.count++;
+    }
+
+    showProgress(i, d, ts.count);
+
+    if (ts.count >= TAPS_NEEDED) {
+      ts.count = 0; ts.dir = 0;
+      // Keep dots showing briefly so user sees all 3 filled, then clear
+      setTimeout(() => clearProgress(i), 350);
+      change(i, d);
+    } else {
+      feedbackLight();
+      ts.timer = setTimeout(() => {
+        ts.count = 0; ts.dir = 0;
+        clearProgress(i);
+      }, TAP_RESET_MS);
+    }
+  }
+
+  function showProgress(i, d, count) {
+    if (!progEls[i]) return;
+    const filled = '●'.repeat(count);
+    const empty = '○'.repeat(TAPS_NEEDED - count);
+    if (d > 0) {
+      progEls[i].inc.textContent = filled + empty;
+      progEls[i].dec.textContent = '';
+    } else {
+      progEls[i].dec.textContent = filled + empty;
+      progEls[i].inc.textContent = '';
+    }
+  }
+
+  function clearProgress(i) {
+    if (!progEls[i]) return;
+    progEls[i].inc.textContent = '';
+    progEls[i].dec.textContent = '';
+  }
+
+  // ---- score change ----
   function change(i, d) {
     state.scores[i] = Math.max(0, state.scores[i] + d);
-    updateScores(); save(); feedback(false);
+    addHistory(i, d);
+    updateScores();
+    save();
+    feedback(false);
   }
 
   function resetScores() {
     state.scores = Array(MAX).fill(START);
-    updateScores(); save(); feedback(true);
+    state.history = emptyHistory();
+    tapState.forEach(ts => { clearTimeout(ts.timer); ts.count = 0; ts.dir = 0; });
+    progEls.forEach((pe, i) => clearProgress(i));
+    histEls.forEach(el => { if (el) el.innerHTML = ''; });
+    updateScores();
+    save();
+    feedback(true);
+  }
+
+  // ---- history ----
+  function addHistory(i, delta) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    state.history[i].unshift({ delta, time: timeStr });
+    if (state.history[i].length > 20) state.history[i].length = 20;
+    renderHistory(i);
+  }
+
+  function renderHistory(i) {
+    const el = histEls[i];
+    if (!el) return;
+    el.innerHTML = '';
+    for (const entry of state.history[i].slice(0, 10)) {
+      const item = document.createElement('div');
+      item.className = 'hist-item ' + (entry.delta > 0 ? 'pos' : 'neg');
+      item.textContent = (entry.delta > 0 ? '+1' : '−1') + ' ' + entry.time;
+      el.appendChild(item);
+    }
   }
 
   // ---- control: tap = setup, hold = reset ----
@@ -263,6 +396,7 @@
     e.preventDefault();
     state.count = draftCount;
     state.names = inputs.map(inp => inp.value.trim());
+    state.history = emptyHistory();
     save();
     setup.hidden = true;
     document.activeElement && document.activeElement.blur();
@@ -283,7 +417,6 @@
 
   render();
 
-  // Cache the app so it keeps working offline once added to the Home Screen.
   if ("serviceWorker" in navigator && location.protocol === "https:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
